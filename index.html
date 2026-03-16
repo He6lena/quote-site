@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>随机名言生成器</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.6s;
+}
+
+.card{
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    color: white;
+    overflow: hidden;
+
+}
+
+#translation{
+    margin-top: 10px;
+    font-size: 18px;
+    opacity: 0.85;
+    font-style: italic;
+}
+
+
+#quote{
+    font-size: 22px;
+    margin-bottom: 25px;
+}
+
+button{
+    padding: 12px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #ff4d4d;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+button:hover{
+    transform: scale(1.1);
+}
+
+.toggle-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+/* 开关整体 */
+.switch{
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+/* 隐藏默认checkbox */
+.switch input{
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* 背景 */
+.slider{
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+/* 圆点 */
+.slider:before{
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+/* 打开状态 */
+input:checked + .slider{
+    background-color: #ff4d4d;
+}
+
+input:checked + .slider:before{
+    transform: translateX(24px);
+}
+
+#favoritesList button{
+margin-right:10px;
+margin-top:5px;
+background:#333;
+}
+
+#favoritesList{
+max-height:200px;
+overflow-y:auto;
+margin-top:10px;
+}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+
+</head>
+
+<body>
+
+<div class="card" id="quoteCard">
+
+
+<h2>今日灵感</h2>
+
+<p id="quote">点击按钮获取一句名言</p>
+<p id="translation"></p>
+
+<div class="toggle-container">
+    <span>显示翻译</span>
+    <label class="switch">
+        <input type="checkbox" id="showTranslation" checked>
+        <span class="slider"></span>
+    </label>
+</div>
+
+<h3>收藏的名言</h3>
+<div id="favoritesList"></div>
+
+
+
+    <br><br>
+    
+
+<button onclick="newQuote()">生成名言</button>
+
+<br><br>
+<button onclick="saveImage()">保存为图片</button>
+
+<br><br>
+<button onclick="saveFavorite()">❤️ 收藏</button>
+
+<br><br>
+<button onclick="shareQuote()">🔗 分享名言</button>
+
+
+</div>
+
+<script>
+
+let gradients = [
+"linear-gradient(45deg, #ff9a9e, #fad0c4)",
+"linear-gradient(45deg, #a18cd1, #fbc2eb)",
+"linear-gradient(45deg, #f6d365, #fda085)",
+"linear-gradient(45deg, #84fab0, #8fd3f4)",
+"linear-gradient(45deg, #cfd9df, #e2ebf0)"
+];
+
+function newQuote(){
+
+fetch("https://api.adviceslip.com/advice")
+.then(response => response.json())
+.then(data => {
+
+let quoteText = data.slip.advice;
+
+document.getElementById("quote").innerText = quoteText;
+
+let showTranslation = document.getElementById("showTranslation").checked;
+
+if(showTranslation){
+    translateQuote();
+}else{
+    document.getElementById("translation").innerText = "";
+}
+
+
+});
+
+let randomBg = Math.floor(Math.random()*gradients.length);
+
+document.getElementById("quoteCard").style.background = gradients[randomBg];
+
+}
+
+function translateQuote(){
+
+let quoteText = document.getElementById("quote").innerText;
+
+if(!quoteText) return;
+
+fetch("https://api.mymemory.translated.net/get?q=" 
++ encodeURIComponent(quoteText) + "&langpair=en|zh")
+
+.then(res => res.json())
+.then(result => {
+
+document.getElementById("translation").innerText =
+result.responseData.translatedText;
+
+});
+
+}
+
+function saveFavorite(){
+
+let quote = document.getElementById("quote").innerText;
+let translation = document.getElementById("translation").innerText;
+
+let favorites = JSON.parse(localStorage.getItem("quotes")) || [];
+
+// 防止重复收藏
+if(favorites.some(item => item.quote === quote)){
+alert("已经收藏过了");
+return;
+}
+
+favorites.push({
+quote: quote,
+translation: translation || ""
+});
+
+localStorage.setItem("quotes", JSON.stringify(favorites));
+
+loadFavorites();   // 立即刷新收藏列表
+
+alert("已收藏 ⭐");
+
+}
+
+
+
+
+function loadFavorites(){
+
+let favorites = JSON.parse(localStorage.getItem("quotes")) || [];
+
+let list = document.getElementById("favoritesList");
+
+list.innerHTML = "";
+
+favorites.forEach((item,index)=>{
+
+let div = document.createElement("div");
+
+div.style.marginTop="10px";
+div.style.padding="10px";
+div.style.background="rgba(255,255,255,0.2)";
+div.style.borderRadius="8px";
+
+div.innerHTML = `
+<p>${item.quote}</p>
+<p>${item.translation}</p>
+
+<button onclick="copyQuote(${index})">复制</button>
+<button onclick="deleteQuote(${index})">删除</button>
+`;
+
+list.appendChild(div);
+
+});
+
+}
+
+function copyQuote(index){
+
+let favorites = JSON.parse(localStorage.getItem("quotes")) || [];
+
+let text = favorites[index].quote + " " + favorites[index].translation;
+
+navigator.clipboard.writeText(text);
+
+alert("已复制");
+
+}
+
+function deleteQuote(index){
+
+let favorites = JSON.parse(localStorage.getItem("quotes")) || [];
+
+favorites.splice(index,1);
+
+localStorage.setItem("quotes",JSON.stringify(favorites));
+
+loadFavorites();
+
+}
+
+function shareQuote(){
+
+let quote = document.getElementById("quote").innerText;
+let translation = document.getElementById("translation").innerText;
+
+let url = window.location.origin + window.location.pathname
++ "?quote=" + encodeURIComponent(quote)
++ "&trans=" + encodeURIComponent(translation);
+
+navigator.clipboard.writeText(url);
+
+alert("分享链接已复制，可以发给朋友 ⭐");
+
+}
+
+function saveImage(){
+
+let card = document.getElementById("quoteCard");
+
+// 找到所有按钮
+let buttons = card.querySelectorAll("button");
+
+// 截图前隐藏按钮
+buttons.forEach(btn => btn.style.display = "none");
+
+html2canvas(card, {scale:2}).then(function(canvas){
+
+let link = document.createElement("a");
+link.download = "quote.png";
+link.href = canvas.toDataURL();
+link.click();
+
+// 截图后恢复按钮
+buttons.forEach(btn => btn.style.display = "inline-block");
+
+});
+
+}
+
+
+loadSharedQuote();
+
+if(!document.getElementById("quote").innerText || 
+document.getElementById("quote").innerText === "点击按钮获取一句名言"){
+
+loadDailyQuote();
+
+}
+
+
+
+document.getElementById("showTranslation")
+.addEventListener("change", function(){
+
+if(this.checked){
+    translateQuote();
+}else{
+    document.getElementById("translation").innerText = "";
+}
+
+});
+
+loadFavorites();
+
+function loadSharedQuote(){
+
+let params = new URLSearchParams(window.location.search);
+
+let quote = params.get("quote");
+let trans = params.get("trans");
+
+if(quote){
+
+document.getElementById("quote").innerText = decodeURIComponent(quote);
+document.getElementById("translation").innerText = decodeURIComponent(trans || "");
+
+document.getElementById("showTranslation").checked = true;
+
+let randomBg = Math.floor(Math.random()*gradients.length);
+document.getElementById("quoteCard").style.background = gradients[randomBg];
+
+}
+
+
+}
+
+function loadDailyQuote(){
+
+let today = new Date().toDateString();
+
+let savedDate = localStorage.getItem("dailyDate");
+let savedQuote = localStorage.getItem("dailyQuote");
+let savedTranslation = localStorage.getItem("dailyTranslation");
+
+if(savedDate === today && savedQuote){
+
+// 今天已经有名言
+document.getElementById("quote").innerText = savedQuote;
+document.getElementById("translation").innerText = savedTranslation || "";
+
+}else{
+
+// 今天没有 → 生成新的
+fetch("https://api.adviceslip.com/advice")
+.then(response => response.json())
+.then(data => {
+
+let quoteText = data.slip.advice;
+
+document.getElementById("quote").innerText = quoteText;
+
+localStorage.setItem("dailyDate", today);
+localStorage.setItem("dailyQuote", quoteText);
+
+// 如果翻译开启
+if(document.getElementById("showTranslation").checked){
+
+fetch("https://api.mymemory.translated.net/get?q="
++ encodeURIComponent(quoteText)
++ "&langpair=en|zh")
+
+.then(res => res.json())
+.then(result => {
+
+let trans = result.responseData.translatedText;
+
+document.getElementById("translation").innerText = trans;
+
+localStorage.setItem("dailyTranslation", trans);
+
+});
+
+}
+
+});
+
+}
+
+// 随机背景
+let randomBg = Math.floor(Math.random()*gradients.length);
+document.getElementById("quoteCard").style.background = gradients[randomBg];
+
+}
+
+
+</script>
+
+</body>
+</html>
